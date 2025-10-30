@@ -1,14 +1,18 @@
 const express = require('express');
-const { Survey, Division } = require('./models');
+const path = require('path');
+const { Survey, Division, District, Upazila } = require('./models');
 
 const app = express();
 app.set('view engine', 'ejs');
-app.set('views', './views');
+app.set('views', path.join(__dirname, '../views'));
 
 app.get('/', async (req, res) => {
   const surveys = await Survey.findAll();
   const divisions = await Division.findAll();
-  res.render('index', { surveys, divisions });
+  const districts = await District.findAll();
+  const upazilas = await Upazila.findAll();
+
+  res.render('index', { surveys, divisions, districts, upazilas });
 });
 
 app.listen(3000, () => {
