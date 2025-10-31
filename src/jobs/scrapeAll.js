@@ -5,6 +5,7 @@ const { fetchAndStoreDivisions } = require('../services/divisionService');
 const { fetchAndStoreDistricts } = require('../services/districtService');
 const { fetchAndStoreUpazilas } = require('../services/upazilaService');
 const { fetchAndStoreSurveyTypes } = require('../services/surveyTypeService');
+const { fetchAndStoreMouzaJLNumbers } = require('../services/mouzaNumberService');
 
 async function runScraper() {
   try {
@@ -29,6 +30,10 @@ async function runScraper() {
     console.log('🔄 Fetching Survey Types...');
     await fetchAndStoreSurveyTypes();
     console.log('✅ Survey Types stored.');
+
+    console.log('🔄 Fetching JL Numbers...');
+    await fetchAndStoreMouzaJLNumbers();
+    console.log('✅ Mouza Numbers stored.');
 
     console.log('🎉 Scraping complete.');
   } catch (err) {
