@@ -1,6 +1,11 @@
+'use strict';
 module.exports = (sequelize, DataTypes) => {
-  return sequelize.define('Khatian', {
-    id: { type: DataTypes.INTEGER, primaryKey: true },
+  const Khatian = sequelize.define('Khatian', {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      allowNull: false
+    },
     jl_number_id: DataTypes.INTEGER,
     mouza_id: DataTypes.INTEGER,
     khatian_no: DataTypes.STRING,
@@ -24,4 +29,6 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'Khatians',
     timestamps: false
   });
+
+  return Khatian;
 };

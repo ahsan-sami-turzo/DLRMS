@@ -2,24 +2,22 @@ const { sequelize, MouzaJLNumber, Khatian } = require('../models');
 const apiClient = require('../services/apiClient');
 const cliProgress = require('cli-progress');
 
+const MAX_CONCURRENT = 10;
+
 async function fetchKhatiansForJL(jlNumberId, survey = 'BRS') {
   const baseUrl = `/index-khatian/${survey}`;
   const pageSize = 100;
 
-  // Step 1: Get metadata
-  const metaRes = await apiClient.get(`${baseUrl}?JL_NUMBER_ID=${jlNumberId}&PAGE_NO=1&PAGE_SIZE=${pageSize}`);
-  const meta = metaRes.data?.data?.meta;
+  try {
+    const metaRes = await apiClient.get(`${baseUrl}?JL_NUMBER_ID=${jlNumberId}&PAGE_NO=1&PAGE_SIZE=${pageSize}`);
+    const meta = metaRes.data?.data?.meta;
 
-  if (!meta || !meta.totalPages) {
-    console.warn(`⚠️ No metadata for JL_NUMBER_ID ${jlNumberId}`);
-    return [];
-  }
+    if (!meta || !meta.totalPages) return [];
 
-  const totalPages = meta.totalPages;
-  const allRecords = [];
+    const totalPages = meta.totalPages;
+    const allRecords = [];
 
-  for (let page = 1; page <= totalPages; page++) {
-    try {
+    for (let page = 1; page <= totalPages; page++) {
       const res = await apiClient.get(`${baseUrl}?JL_NUMBER_ID=${jlNumberId}&PAGE_NO=${page}&PAGE_SIZE=${pageSize}`);
       const items = res.data?.data?.items || [];
 
@@ -47,12 +45,12 @@ async function fetchKhatiansForJL(jlNumberId, survey = 'BRS') {
       }));
 
       allRecords.push(...records);
-    } catch (err) {
-      console.warn(`❌ Failed page ${page} for JL ${jlNumberId}: ${err.message}`);
     }
-  }
 
-  return allRecords;
+    return allRecords;
+  } catch (err) {
+    throw new Error(`JL ${jlNumberId} failed: ${err.message}`);
+  }
 }
 
 async function runKhatianScraper() {
@@ -60,18 +58,45 @@ async function runKhatianScraper() {
     await sequelize.sync();
 
     const jlNumbers = await MouzaJLNumber.findAll();
-    console.log(`🔍 Found ${jlNumbers.length} JL numbers.`);
+    const jlIds = jlNumbers.map(jl => jl.id);
+    const failed = [];
 
+    console.log(`🔍 Found ${jlIds.length} JL numbers.`);
     const progressBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
-    progressBar.start(jlNumbers.length, 0);
+    progressBar.start(jlIds.length, 0);
 
-    for (const jl of jlNumbers) {
-      const records = await fetchKhatiansForJL(jl.id);
-      if (records.length > 0) {
-        await Khatian.bulkCreate(records, { ignoreDuplicates: true });
-        console.log(`✅ Stored ${records.length} khatians for JL ${jl.id}`);
+    for (let i = 0; i < jlIds.length; i += MAX_CONCURRENT) {
+      const batch = jlIds.slice(i, i + MAX_CONCURRENT);
+
+      const results = await Promise.allSettled(
+        batch.map(jlId =>
+          fetchKhatiansForJL(jlId)
+            .then(records => {
+              if (records.length > 0) {
+                return Khatian.bulkCreate(records, { ignoreDuplicates: true });
+              }
+            })
+            .catch(() => failed.push(jlId))
+        )
+      );
+
+      progressBar.increment(batch.length);
+    }
+
+    // Retry failed JL numbers once
+    if (failed.length > 0) {
+      console.log(`🔁 Retrying ${failed.length} failed JL numbers...`);
+      for (const jlId of failed) {
+        try {
+          const records = await fetchKhatiansForJL(jlId);
+          if (records.length > 0) {
+            await Khatian.bulkCreate(records, { ignoreDuplicates: true });
+            console.log(`✅ Retry success for JL ${jlId}`);
+          }
+        } catch (err) {
+          console.warn(`❌ Retry failed for JL ${jlId}: ${err.message}`);
+        }
       }
-      progressBar.increment();
     }
 
     progressBar.stop();

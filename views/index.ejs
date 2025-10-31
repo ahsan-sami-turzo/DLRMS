@@ -137,6 +137,45 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Mouza JL Numbers -->
+    <h2>Mouza JL Numbers</h2>
+    <div class="scroll-table">
+      <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+          <tr>
+            <th>ID</th>
+            <th>Mouza ID</th>
+            <th>Mouza Name</th>
+            <th>JL Number</th>
+            <th>Division</th>
+            <th>District</th>
+            <th>Upazila</th>
+            <th>Survey ID</th>
+            <th>Survey Name</th>
+            <th>Survey Name (EN)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% mouzas.forEach(m => { %>
+            <tr>
+              <td><%= m.id %></td>
+              <td><%= m.mouza_id %></td>
+              <td><%= m.mouza_name %></td>
+              <td><%= m.jl_number %></td>
+              <td><%= m.division_name %></td>
+              <td><%= m.district_name %></td>
+              <td><%= m.upazila_name %></td>
+              <td><%= m.survey_id %></td>
+              <td><%= m.survey_name %></td>
+              <td><%= m.survey_name_en %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+
   </div>
 </body>
 </html>
